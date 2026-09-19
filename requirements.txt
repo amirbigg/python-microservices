@@ -1,7 +1,9 @@
 asgiref==3.12.1
 Django==6.1.1
 djangorestframework==3.18.1
+djangorestframework_simplejwt==5.5.1
 psycopg==3.3.6
 psycopg-binary==3.3.6
+PyJWT==2.14.0
 sqlparse==0.6.0
 typing_extensions==4.16.0
