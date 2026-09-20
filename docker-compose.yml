@@ -1,0 +1,25 @@
+services:
+  user-service:
+    build:
+      context: ./services/user-service
+    container_name: shop-user-service
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./services/user-service/.env
+    depends_on:
+      - user-db
+
+  user-db:
+    image: postgres:16
+    container_name: shop-user-db
+    environment:
+      POSTGRES_DB: shop_users
+      POSTGRES_USER: shop_user
+      POSTGRES_PASSWORD: amir
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  user_postgres_data:
