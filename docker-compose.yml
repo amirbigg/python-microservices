@@ -21,5 +21,28 @@ services:
     volumes:
       - user_postgres_data:/var/lib/postgresql/data
 
+  catalog-service:
+    build:
+      context: ./services/catalog-service
+    container_name: shop-catalog-service
+    command: python manage.py runserver 0.0.0.0:8001
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./services/catalog-service/.env
+    depends_on:
+      - catalog-db
+
+  catalog-db:
+    image: postgres:16
+    container_name: shop-catalog-db
+    environment:
+      POSTGRES_DB: shop_catalog
+      POSTGRES_USER: shop_catalog_user
+      POSTGRES_PASSWORD: amir
+    volumes:
+      - catalog_postgres_data:/var/lib/postgresql/data
+
 volumes:
   user_postgres_data:
+  catalog_postgres_data:
