@@ -15,9 +15,9 @@ services:
     image: postgres:16
     container_name: shop-user-db
     environment:
-      POSTGRES_DB: shop_users
-      POSTGRES_USER: shop_user
-      POSTGRES_PASSWORD: amir
+      POSTGRES_DB: ${USER_DB_NAME}
+      POSTGRES_USER: ${USER_DB_USER}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
     volumes:
       - user_postgres_data:/var/lib/postgresql/data
 
@@ -37,9 +37,9 @@ services:
     image: postgres:16
     container_name: shop-catalog-db
     environment:
-      POSTGRES_DB: shop_catalog
-      POSTGRES_USER: shop_catalog_user
-      POSTGRES_PASSWORD: amir
+      POSTGRES_DB: ${CATALOG_DB_NAME}
+      POSTGRES_USER: ${CATALOG_DB_USER}
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD}
     volumes:
       - catalog_postgres_data:/var/lib/postgresql/data
 
