@@ -1,6 +1,17 @@
 from rest_framework import viewsets
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer
+
+
+class HealthCheckView(APIView):
+    def get(self, request):
+        return Response({
+            "service": "catalog-service",
+            "status": "ok",
+        })
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
