@@ -10,6 +10,15 @@ services:
       - user-service
       - catalog-service
 
+  redis:
+    image: redis:7-alpine
+    container_name: shop-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
   user-service:
     build:
       context: ./services/user-service
@@ -43,6 +52,7 @@ services:
       - ./services/catalog-service/.env
     depends_on:
       - catalog-db
+      - redis
 
   catalog-db:
     image: postgres:16
@@ -53,15 +63,6 @@ services:
       POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD}
     volumes:
       - catalog_postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    container_name: shop-redis
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
 
 volumes:
   user_postgres_data:
