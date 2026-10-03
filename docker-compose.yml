@@ -10,6 +10,15 @@ services:
       - user-service
       - catalog-service
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: shop-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
   redis:
     image: redis:7-alpine
     container_name: shop-redis
@@ -68,3 +77,4 @@ volumes:
   user_postgres_data:
   catalog_postgres_data:
   redis_data:
+  rabbitmq_data:
