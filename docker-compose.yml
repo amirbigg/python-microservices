@@ -18,6 +18,7 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
 
   redis:
     image: redis:7-alpine
@@ -73,6 +74,18 @@ services:
       POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD}
     volumes:
       - catalog_postgres_data:/var/lib/postgresql/data
+
+  catalog-worker:
+    build:
+      context: ./services/catalog-service
+    container_name: shop-catalog-worker
+    command: celery -A config worker --loglevel=info
+    env_file:
+      - ./services/catalog-service/.env
+    depends_on:
+      - catalog-db
+      - redis
+      - rabbitmq
 
 volumes:
   user_postgres_data:
