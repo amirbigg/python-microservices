@@ -62,6 +62,7 @@ services:
     depends_on:
       - catalog-db
       - redis
+      - rabbitmq
 
   catalog-db:
     image: postgres:16

@@ -2,9 +2,11 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.core.cache import cache
+from django.db import transaction
 
 from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer
+from .messaging.rabbitmq import publish_event
 
 
 class HealthCheckView(APIView):
@@ -42,6 +44,21 @@ class ProductViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
         cache.delete("product-list")
+
+        if response.status_code == 201:
+            product_id = response.data["id"]
+
+            def publish_product_created():
+                product = Product.objects.get(pk=product_id)
+
+                publish_event("product.created", {
+                    "id": product.id,
+                    "name": product.name,
+                    "price": str(product.price),
+                    "stock": product.stock
+                })
+
+            transaction.on_commit(publish_product_created)
         return response
 
     def update(self, request, *args, **kwargs):
