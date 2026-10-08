@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-8wjp--)*tmnq)#ou5ksr_wl#1e44!=9kp1u=!eb&kl6s84o@m*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "catalog-service"]
 
 
 # Application definition

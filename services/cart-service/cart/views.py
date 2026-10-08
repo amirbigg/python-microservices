@@ -3,6 +3,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .clients.catalog import CatalogServiceError, get_product
+
 
 def get_user_id(request):
     user_id = request.headers.get("X-User-ID")
@@ -51,6 +53,17 @@ class CartItemView(APIView):
 
         if quantity <= 0:
             return Response({"detail": "quantity must be greater than zero."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            product = get_product(product_id)
+        except CatalogServiceError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        if product is None:
+            return Response({"detail": "Product does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not product["is_active"]:
+            return Response({"detail": "Product is not active."}, status=status.HTTP_400_BAD_REQUEST)
 
         key = get_cart_key(user_id)
         cart = cache.get(key, {"items":[]})

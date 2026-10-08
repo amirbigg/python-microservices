@@ -95,8 +95,11 @@ services:
     command: python manage.py runserver 0.0.0.0:8002
     ports:
       - "8002:8002"
+    env_file:
+      - ./services/cart-service/.env
     depends_on:
       - redis
+      - catalog-service
 
 volumes:
   user_postgres_data:
