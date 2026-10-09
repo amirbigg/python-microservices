@@ -2,15 +2,9 @@ from django.core.cache import cache
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 from .clients.catalog import CatalogServiceError, get_product
-
-
-def get_user_id(request):
-    user_id = request.headers.get("X-User-ID")
-    if not user_id:
-        return None
-    return user_id
 
 
 def get_cart_key(user_id):
@@ -23,8 +17,10 @@ class HealthCheckView(APIView):
 
 
 class CartView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        user_id = get_user_id(request)
+        user_id = request.user.id
 
         if not user_id:
             return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -34,8 +30,10 @@ class CartView(APIView):
 
 
 class CartItemView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
-        user_id = get_user_id(request)
+        user_id = request.user.id
 
         if not user_id:
             return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -80,8 +78,10 @@ class CartItemView(APIView):
 
 
 class CartItemDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def patch(self, request, product_id):
-        user_id = get_user_id(request)
+        user_id = request.user.id
 
         if not user_id:
             return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -107,7 +107,7 @@ class CartItemDetailView(APIView):
         return Response({"detail": "Product is not in cart."}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, product_id):
-        user_id = get_user_id(request)
+        user_id = request.user.id
 
         if not user_id:
             return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -121,8 +121,10 @@ class CartItemDetailView(APIView):
 
 
 class CartClearView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def delete(self, request):
-        user_id = get_user_id(request)
+        user_id = request.user.id
 
         if not user_id:
             return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
