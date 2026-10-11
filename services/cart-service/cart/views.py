@@ -21,10 +21,6 @@ class CartView(APIView):
 
     def get(self, request):
         user_id = request.user.id
-
-        if not user_id:
-            return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
-
         cart = cache.get(get_cart_key(user_id), {"items":[]})
         return Response(cart)
 
@@ -34,10 +30,6 @@ class CartItemView(APIView):
 
     def post(self, request):
         user_id = request.user.id
-
-        if not user_id:
-            return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
-
         product_id = request.data.get("product_id")
         quantity = request.data.get("quantity", 1)
 
@@ -82,10 +74,6 @@ class CartItemDetailView(APIView):
 
     def patch(self, request, product_id):
         user_id = request.user.id
-
-        if not user_id:
-            return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
-
         quantity = request.data.get("quantity")
         try:
             quantity = int(quantity)
@@ -108,10 +96,6 @@ class CartItemDetailView(APIView):
 
     def delete(self, request, product_id):
         user_id = request.user.id
-
-        if not user_id:
-            return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
-
         key = get_cart_key(user_id)
         cart = cache.get(key, {"items":[]})
 
@@ -125,9 +109,5 @@ class CartClearView(APIView):
 
     def delete(self, request):
         user_id = request.user.id
-
-        if not user_id:
-            return Response({"detail": "X-User-ID header is required."}, status=status.HTTP_400_BAD_REQUEST)
-
         cache.delete(get_cart_key(user_id))
         return Response({"items":[]})

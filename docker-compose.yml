@@ -10,6 +10,7 @@ services:
       - user-service
       - catalog-service
       - cart-service
+      - inventory-service
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -101,8 +102,31 @@ services:
       - redis
       - catalog-service
 
+  inventory-db:
+    image: postgres:16
+    container_name: shop-inventory-db
+    environment:
+      POSTGRES_DB: ${INVENTORY_DB_NAME}
+      POSTGRES_USER: ${INVENTORY_DB_USER}
+      POSTGRES_PASSWORD: ${INVENTORY_DB_PASSWORD}
+    volumes:
+      - inventory_postgres_data:/var/lib/postgresql/data
+
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+    container_name: shop-inventoy-service
+    command: python manage.py runserver 0.0.0.0:8003
+    ports:
+      - "8003:8003"
+    env_file:
+      - ./services/inventory-service/.env
+    depends_on:
+      - inventory-db
+
 volumes:
   user_postgres_data:
   catalog_postgres_data:
   redis_data:
   rabbitmq_data:
+  inventory_postgres_data:
