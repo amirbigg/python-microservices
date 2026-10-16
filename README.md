@@ -143,9 +143,9 @@ All Cart endpoints other than the health check are intended to require JWT authe
 
 ### Inventory Service — In Progress
 
-The initial Inventory Service design uses its own Django project and PostgreSQL database. It stores the Catalog product ID as a scalar field rather than using a cross-service foreign key.
+The Inventory Service is designed to use its own Django project and PostgreSQL database. It stores the Catalog product ID as a scalar field rather than using a cross-service foreign key. The base setup checklist below must only be checked after the service has actually been created and tested.
 
-Planned initial API:
+Initial read API:
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -153,11 +153,11 @@ Planned initial API:
 | GET | `/api/inventory/items/` | List inventory records (JWT required) |
 | GET | `/api/inventory/items/{product_id}/` | Retrieve a product's inventory (JWT required) |
 
-Initial implementation checklist:
+Base implementation checklist:
 
 - [ ] Create the Django project and `inventory` application
 - [ ] Add Inventory-specific PostgreSQL configuration and environment variables
-- [ ] Add the `InventoryItem` model (`product_id`, `quantity`, timestamps)
+- [ ] Add the `InventoryItem` model (`product_id`, available `quantity`, timestamps)
 - [ ] Add a read-only inventory API
 - [ ] Configure stateless JWT authentication
 - [ ] Register the model in Django Admin
@@ -166,7 +166,28 @@ Initial implementation checklist:
 - [ ] Add and pass basic API tests
 - [ ] Verify the health endpoint through the API Gateway
 
-Stock reservation/release, atomic concurrency-safe updates, catalog-event handling, and Cart integration are later steps and are not considered implemented yet.
+#### Reservation Lifecycle — Current Development Step
+
+The planned reservation workflow uses a client-generated UUID as an idempotency key. Reserving stock reduces the available quantity atomically; releasing an active reservation restores it exactly once; confirming a reservation leaves the stock deducted. A released reservation ID cannot be reused.
+
+Planned reservation endpoints (not considered implemented until the code and tests pass):
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/inventory/reservations/` | Reserve stock using `reservation_id`, `product_id`, and `quantity` (JWT required) |
+| POST | `/api/inventory/reservations/{reservation_id}/release/` | Release an active reservation (JWT required) |
+| POST | `/api/inventory/reservations/{reservation_id}/confirm/` | Confirm a reservation (JWT required) |
+
+Reservation implementation checklist:
+
+- [ ] Add a `StockReservation` model and reservation status lifecycle
+- [ ] Use database transactions and row locks to prevent overselling
+- [ ] Make reserve retries idempotent with a caller-supplied UUID
+- [ ] Ensure a reservation can be released at most once
+- [ ] Add reservation and stock consistency tests
+- [ ] Run migrations and verify the endpoints with JWT
+
+Catalog-event handling, initial stock synchronization, and Cart integration remain future tasks.
 
 ## Infrastructure
 
@@ -240,10 +261,10 @@ Named volumes are preserved by this command unless explicitly removed.
 
 ## Next Steps
 
-1. Complete the initial Inventory Service setup and pass its tests.
-2. Finish and verify Cart Service JWT integration and authentication tests.
-3. Implement atomic stock reservation and release in Inventory Service.
-4. Integrate Catalog product events with Inventory Service and plan how existing stock data will be migrated.
+1. Complete and verify the base Inventory Service setup if it is not already complete.
+2. Implement and test atomic, idempotent stock reservation, release, and confirmation.
+3. Finish and verify Cart Service JWT integration and authentication tests.
+4. Integrate Catalog product events with Inventory Service and define how existing stock values will be migrated.
 5. Integrate Cart Service with Inventory Service.
 6. Create Order Service.
 7. Develop Payment Service.

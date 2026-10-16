@@ -57,7 +57,7 @@ class InventoryAPITests(TestCase):
 
     def test_repeated_reservation_does_not_deduct_stock_twice(self):
         reservation_id = str(uuid4())
-        payload = {"reservation_id": reservation_id, "product_id": 15, "quantity": 3},
+        payload = {"reservation_id": reservation_id, "product_id": 15, "quantity": 3}
 
         first = self.authenticated_client.post("/api/inventory/reservations/", payload, format="json")
         second = self.authenticated_client.post("/api/inventory/reservations/", payload, format="json")
@@ -90,7 +90,7 @@ class InventoryAPITests(TestCase):
 
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
-        self.assertEqual(second.data["status"], "release")
+        self.assertEqual(second.data["status"], "released")
 
         self.item.refresh_from_db()
         self.assertEqual(self.item.quantity, 40)

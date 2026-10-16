@@ -22,7 +22,7 @@ def _reserve_stock(reservation_id, product_id, quantity):
         if not same_request:
             raise ReservationConflict("This reservation ID belongs to a different request.")
 
-        if existing.status == StockReservation.Status.RESERVED:
+        if existing.status == StockReservation.Status.RELEASED:
             raise ReservationConflict("A released reservation ID cannot be reused.")
 
         return existing, False
@@ -43,7 +43,7 @@ def reserve_stock(reservation_id, product_id, quantity):
     try:
         return _reserve_stock(reservation_id, product_id, quantity)
     except IntegrityError:
-        existing = StockReservation.objects.select_for_update().filter(reservation_id=reservation_id).first()
+        existing = StockReservation.objects.select_related("inventory_item").filter(reservation_id=reservation_id).first()
 
         if existing is None:
             raise
