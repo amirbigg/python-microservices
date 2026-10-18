@@ -115,7 +115,7 @@ services:
   inventory-service:
     build:
       context: ./services/inventory-service
-    container_name: shop-inventoy-service
+    container_name: shop-inventory-service
     command: python manage.py runserver 0.0.0.0:8003
     ports:
       - "8003:8003"
@@ -123,6 +123,18 @@ services:
       - ./services/inventory-service/.env
     depends_on:
       - inventory-db
+
+  inventory-worker:
+    build:
+      context: ./services/inventory-service
+    container_name: shop-inventory-worker
+    command: python manage.py consume_catalog_events
+    env_file:
+      - ./services/inventory-service/.env
+    depends_on:
+      - inventory-db
+      - rabbitmq
+    restart: unless-stopped
 
 volumes:
   user_postgres_data:

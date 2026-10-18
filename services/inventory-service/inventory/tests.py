@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from .models import InventoryItem
+from inventory.messaging.catalog_event import process_catalog_event, InvalidCatalogEvent
 
 
 class InventoryAPITests(TestCase):
@@ -130,3 +131,68 @@ class InventoryAPITests(TestCase):
                                        format="json")
 
         self.assertEqual(response.status_code, 401)
+
+
+class CatalogEventHandlerTests(TestCase):
+    def test_product_creates_inventory_record(self):
+        message = {
+            "event": "product.created",
+            "data": {"id":101, "name":"Test Product", "price":14, "stock": 7}
+        }
+
+        item, created = process_catalog_event(message)
+
+        self.assertTrue(created)
+        self.assertEqual(item.product_id, 101)
+        self.assertEqual(item.quantity, 7)
+        self.assertEqual(InventoryItem.objects.filter(product_id=101).count(), 1)
+
+    def test_duplicate_event_does_not_reset_inventory(self):
+        InventoryItem.objects.create(product_id=102, quantity=3)
+
+        message = {
+            "event": "product.created",
+            "data": {"id": 102, "name": "Test Product", "price": 14, "stock": 20}
+        }
+
+        item, created = process_catalog_event(message)
+
+        self.assertFalse(created)
+        self.assertEqual(item.quantity, 3)
+        self.assertEqual(InventoryItem.objects.filter(product_id=102).count(), 1)
+
+    def test_invalid_event_type_is_rejected(self):
+        message = {
+            "event": "product.updated",
+            "data": {"id": 102, "name": "Test Product", "price": 14, "stock": 20}
+        }
+
+        with self.assertRaises(InvalidCatalogEvent):
+            process_catalog_event(message)
+
+    def test_invalid_product_id_is_rejected(self):
+        invalid_messages = [
+            {"event": "product.created", "data": {"id": "103", "stock": 20}},
+            {"event": "product.created", "data": {"id": 0, "stock": 20}},
+        ]
+
+        for message in invalid_messages:
+            with self.subTest(message=message):
+                with self.assertRaises(InvalidCatalogEvent):
+                    process_catalog_event(message)
+
+    def test_negative_stock_is_rejected(self):
+        invalid_messages = {
+            "event": "product.created", "data": {"id": "103", "stock": -1}
+         }
+
+        with self.assertRaises(InvalidCatalogEvent):
+            process_catalog_event(invalid_messages)
+
+    def test_missing_stock_is_rejected(self):
+        invalid_messages = {
+            "event": "product.created", "data": {"id": "103"}
+        }
+
+        with self.assertRaises(InvalidCatalogEvent):
+            process_catalog_event(invalid_messages)
