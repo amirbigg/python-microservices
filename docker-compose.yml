@@ -101,6 +101,7 @@ services:
     depends_on:
       - redis
       - catalog-service
+      - inventory-service
 
   inventory-db:
     image: postgres:16
