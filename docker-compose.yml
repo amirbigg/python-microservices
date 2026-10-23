@@ -11,6 +11,7 @@ services:
       - catalog-service
       - cart-service
       - inventory-service
+      - order-service
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -137,9 +138,35 @@ services:
       - rabbitmq
     restart: unless-stopped
 
+  order-db:
+    image: postgres:16
+    container_name: shop-order-db
+    environment:
+      POSTGRES_DB: ${ORDER_DB_NAME}
+      POSTGRES_USER: ${ORDER_DB_USER}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD}
+    volumes:
+      - order_postgres_data:/var/lib/postgresql/data
+
+  order-service:
+    build:
+      context: ./services/order-service
+    container_name: shop-order-service
+    command: python manage.py runserver 0.0.0.0:8004
+    ports:
+      - "8004:8004"
+    env_file:
+      - ./services/order-service/.env
+    depends_on:
+      - order-db
+      - cart-service
+      - catalog-service
+      - inventory-service
+
 volumes:
   user_postgres_data:
   catalog_postgres_data:
   redis_data:
   rabbitmq_data:
   inventory_postgres_data:
+  order_postgres_data:
