@@ -25,7 +25,7 @@ class CheckoutView(APIView):
         if len(idempotency_key) > 128:
             return Response({"detail": "Idempotency-Key cannot exceed 128 characters."}, status=status.HTTP_400_BAD_REQUEST)
 
-        authorization = request.headers.get("Auhtorization", "")
+        authorization = request.headers.get("Authorization", "")
 
         try:
             order, created = checkout(customer_id=request.user.id, authorization=authorization, idempotency_key=idempotency_key)
