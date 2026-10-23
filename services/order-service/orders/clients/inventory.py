@@ -9,7 +9,7 @@ INVENTORY_SERVICE_URL = os.getenv("INVENTORY_SERVICE_URL", "http://inventory-ser
 
 
 def reserve_stock(authorization, reservation_id, product_id, quantity):
-    url = f"{INVENTORY_SERVICE_URL}/api/inventory/reservation/"
+    url = f"{INVENTORY_SERVICE_URL}/api/inventory/reservations/"
     payload = {"reservation_id": str(reservation_id), "product_id": product_id, "quantity": quantity}
 
     try:
@@ -27,7 +27,7 @@ def reserve_stock(authorization, reservation_id, product_id, quantity):
 
 
 def release_stock(authorization, reservation_id):
-    url = f"{INVENTORY_SERVICE_URL}/api/inventory/reservation/{reservation_id}/release/"
+    url = f"{INVENTORY_SERVICE_URL}/api/inventory/reservations/{reservation_id}/release/"
 
     try:
         response = httpx.post(url, headers={"Authorization":authorization}, timeout=5.0)

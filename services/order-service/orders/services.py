@@ -59,7 +59,7 @@ def _prepare_order_items(quantities, authorization):
             raise CheckoutError(f"Product {product_id} is not active.", 400)
 
         price = product["price"]
-        if price < 0: # removed is_finite
+        if price < 0:
             raise CheckoutError(f"Product {product_id} has an invalid price.", 502)
 
         name = product.get("name")
@@ -107,7 +107,7 @@ def _compensate_reservations(order, authorization):
             release_stock(authorization, item.reservation_id)
         except DownstreamUnavailable:
             compensation_failed = True
-            logger.exception(f"Could not compensate reservation {item.reservation_Id} for order {order.id}")
+            logger.exception(f"Could not compensate reservation {item.reservation_id} for order {order.id}")
 
     return compensation_failed
 
@@ -158,7 +158,7 @@ def checkout(customer_id, authorization, idempotency_key):
         _mark_order_failed(order, authorization, str(exc))
         raise CheckoutError(str(exc), 503) from exc
 
-    order.satus = Order.Status.AWAITING_PAYMENT
+    order.status = Order.Status.AWAITING_PAYMENT
     order.save(update_fields=["status", "updated"])
 
     return order, True
