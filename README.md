@@ -1,29 +1,20 @@
 # Python Microservices — Educational E-commerce Platform
 
-A learning project for building an e-commerce backend with Django REST Framework and a microservices architecture.
+A learning project for an e-commerce backend built with Django REST Framework and a microservices architecture.
 
-> **Project status:** This README describes the intended state through the Order Service stage. Verify endpoint contracts, tests, and end-to-end behavior against the current GitHub branch before treating every item as verified or production-ready.
+> **Scope:** This repository currently documents five services: User, Catalog, Cart, Inventory, and Order. Payment Service is intentionally excluded from the current documentation work.
 
-## Table of Contents
+## Documentation
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Services](#services)
-- [Technology Stack](#technology-stack)
-- [Local Development](#local-development)
-- [Environment Configuration](#environment-configuration)
-- [API Gateway](#api-gateway)
-- [Checkout Flow](#checkout-flow)
-- [Testing](#testing)
-- [Security Notes](#security-notes)
-- [Known Limitations](#known-limitations)
-- [Next Steps](#next-steps)
+Each service has its own README with responsibilities, API endpoints, configuration, and testing instructions.
 
-## Overview
-
-The goal is to learn microservices concepts by building an e-commerce platform incrementally. Each service owns its own data and communicates with other services through APIs or asynchronous events rather than directly accessing another service's database.
-
-The repository uses a monorepo structure: services live under `services/`, while shared infrastructure configuration lives at the repository root and under `infrastructure/`.
+| Service | Documentation | Responsibility |
+|---|---|---|
+| User | [User Service README](services/user-service/README.md) | Registration, JWT authentication, current-user profile |
+| Catalog | [Catalog Service README](services/catalog-service/README.md) | Product and category data; publishes product-created events |
+| Cart | [Cart Service README](services/cart-service/README.md) | Per-user cart state in Redis; validates product and stock availability |
+| Inventory | [Inventory Service README](services/inventory-service/README.md) | Authoritative stock and stock reservations |
+| Order | [Order Service README](services/order-service/README.md) | Checkout coordination, order records, and stock reservation requests |
 
 ## Architecture
 
@@ -31,8 +22,7 @@ The repository uses a monorepo structure: services live under `services/`, while
                          Client
                            |
                            v
-                      API Gateway
-                         Nginx
+                      Nginx API Gateway
                            |
           +----------------+----------------+
           |                |                |
@@ -40,232 +30,134 @@ The repository uses a monorepo structure: services live under `services/`, while
      User Service     Catalog Service    Cart Service
           |                |                |
           v                v                v
-      User DB          Catalog DB         Redis
+       User DB          Catalog DB         Redis
                            |
                            | RabbitMQ: product.created
                            v
-                    Inventory Worker
+                    Inventory Event Worker
                            |
                            v
                     Inventory Service
                            |
                            v
-                     Inventory DB
+                      Inventory DB
 
                        Order Service
                       /      |      \
                      v       v       v
                    Cart    Catalog  Inventory
-                      \      |      /
-                       \     |     /
-                         Order DB
+                           |
+                        Order DB
 ```
 
 ### Architecture principles
 
-- **Database per service:** User, Catalog, Inventory, and Order each have their own database. Cart uses Redis for cart data.
-- **No shared database models:** A service must not query or modify another service's database directly.
-- **Synchronous communication:** HTTP APIs are used for request/response interactions such as cart retrieval, product lookup, and stock reservation.
-- **Asynchronous communication:** RabbitMQ carries domain events such as `product.created`.
-- **Cache and cart state:** Redis stores cart data; it is not the authoritative inventory store.
-- **Checkout coordination:** Order coordinates checkout and stock reservation. Payment is not implemented yet.
-
-## Services
-
-### 1. User Service
-
-**Location:** `services/user-service`
-
-Responsibilities:
-- User registration and authentication.
-- JWT access and refresh tokens.
-- Authenticated current-user endpoint.
-
-Endpoints:
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/users/register/` | Register a user |
-| POST | `/api/users/login/` | Obtain JWT tokens |
-| GET | `/api/users/me/` | Current authenticated user |
-| GET | `/api/users/health/` | Health check |
-
-### 2. Catalog Service
-
-**Location:** `services/catalog-service`
-
-Responsibilities:
-- Manage categories and products.
-- Expose product details to other services.
-- Cache product-list responses in Redis.
-- Publish product-created events to RabbitMQ.
-
-Endpoints:
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET/POST | `/api/catalog/categories/` | List or create categories |
-| GET/POST | `/api/catalog/products/` | List or create products |
-| GET | `/api/catalog/health/` | Health check |
-
-The exact supported methods and permissions depend on the current viewsets and router configuration.
-
-### 3. Cart Service
-
-**Location:** `services/cart-service`
-
-Responsibilities:
-- Store each user's cart in Redis.
-- Validate products through Catalog.
-- Check available inventory through the Inventory API before adding/increasing quantities.
-- Keep cart data separate from product and inventory databases.
-
-Endpoints:
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/api/cart/` | Retrieve current user's cart |
-| POST | `/api/cart/items/` | Add an item |
-| PATCH | `/api/cart/items/{product_id}/` | Change item quantity |
-| DELETE | `/api/cart/items/{product_id}/` | Remove an item |
-| DELETE | `/api/cart/clear/` | Clear the cart |
-| GET | `/api/cart/health/` | Health check |
-
-Adding an item checks current availability but **does not reserve stock**. Inventory can change after the check, so checkout must reserve stock atomically.
-
-### 4. Inventory Service
-
-**Location:** `services/inventory-service`
-
-Responsibilities:
-- Own inventory records and stock-reservation data.
-- Consume `product.created` events from Catalog through a separate RabbitMQ worker.
-- Initialize inventory records from the initial stock value in the event.
-- Provide APIs for inventory queries and reservation/release operations.
-
-The Catalog event consumer is designed to process duplicate `product.created` events idempotently. Invalid events are routed to a dead-letter queue. A transactional outbox, bounded retries, automated recovery, and monitoring remain future improvements.
-
-> Verify exact Inventory endpoint paths and request/response schemas in `services/inventory-service/inventory/urls.py` and `views.py`; Order's HTTP client must match those definitions.
-
-### 5. Order Service
-
-**Location:** `services/order-service`
-
-Responsibilities:
-- Own order and order-item records in a dedicated PostgreSQL database.
-- Read the authenticated user's cart.
-- Fetch product names and prices from Catalog and save a snapshot in each order.
-- Request stock reservations from Inventory.
-- Attempt compensating releases if checkout fails.
-- Clear the cart after all reservations succeed.
-- Return orders only to their owner.
-
-Planned endpoints:
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/api/orders/health/` | Health check |
-| POST | `/api/orders/checkout/` | Create an order from the current cart |
-| GET | `/api/orders/` | List current user's orders |
-| GET | `/api/orders/{order_id}/` | Retrieve an order |
-
-Checkout requires a valid JWT and an `Idempotency-Key` header. A successful initial checkout moves the order to `awaiting_payment`; payment processing and final reservation confirmation are not implemented yet.
+- **Data ownership:** Each service owns its data. User, Catalog, Inventory, and Order use their own PostgreSQL databases; Cart stores cart state in Redis.
+- **No cross-service database access:** Services communicate over HTTP or asynchronous events instead of querying another service's database.
+- **Synchronous communication:** Order retrieves the cart and product details and requests inventory reservations over HTTP.
+- **Asynchronous communication:** Catalog publishes `product.created` to RabbitMQ; Inventory consumes the event to initialize stock records.
+- **Stock authority:** Inventory is authoritative for available stock. A Cart stock check does not reserve inventory.
+- **Checkout coordination:** Order creates an order, saves product/price snapshots, reserves inventory, clears the cart on success, and attempts compensating releases when checkout fails.
 
 ## Technology Stack
 
-- Python
-- Django
-- Django REST Framework
-- PostgreSQL (separate database per applicable service)
+- Python, Django, Django REST Framework
+- PostgreSQL
 - Redis
 - RabbitMQ
-- Celery (background-task infrastructure in Catalog)
+- Celery infrastructure in Catalog
 - Docker and Docker Compose
 - Nginx API Gateway
 - SimpleJWT
-- HTTPX for service-to-service HTTP calls
+- HTTPX for internal HTTP calls
 
-## Local Development
+## Run locally
 
-Commands below assume Docker Compose is configured at the repository root and service names match `docker-compose.yml`.
+Run commands from the repository root.
 
-### Start services
+### 1. Configure environment variables
+
+Copy each service's `.env.example` to a local `.env` where needed, and fill in values appropriate for your environment. Configure the root `.env` for Docker Compose as required by the current `docker-compose.yml`.
+
+Do not commit actual `.env` files, passwords, Django secret keys, or JWT signing keys. The `.env.example` files are templates; variable names and loading behavior should match the service settings and Compose configuration.
+
+### 2. Start the stack
 
 ```bash
 docker compose up -d --build
 docker compose ps
 ```
 
-### Run migrations
+### 3. Apply database migrations
 
 ```bash
-docker compose exec user-service python manage.py migrate
-docker compose exec catalog-service python manage.py migrate
-docker compose exec inventory-service python manage.py migrate
+docker compose run --rm user-service python manage.py migrate
+docker compose run --rm catalog-service python manage.py migrate
+docker compose run --rm inventory-service python manage.py migrate
 docker compose run --rm order-service python manage.py migrate
 ```
 
-If a service is not running, use `docker compose run --rm <service> python manage.py migrate` instead of `exec`.
+Cart uses Redis for its cart data and does not have a cart database model to migrate.
 
-### View logs
+### 4. Check logs
 
 ```bash
 docker compose logs -f user-service
 docker compose logs -f catalog-service
+docker compose logs -f cart-service
 docker compose logs -f inventory-service
 docker compose logs -f inventory-worker
 docker compose logs -f order-service
 ```
 
-### Local endpoint
+### 5. API base URL
 
-If the gateway is mapped to port `8080`, the API base URL is:
+When the gateway is mapped to host port `8080`, use:
 
 ```text
 http://localhost:8080
 ```
 
-Some services may also expose their own development ports for debugging, depending on the current Compose configuration.
+The API Gateway route prefixes are:
 
-## Environment Configuration
+| Prefix | Service |
+|---|---|
+| `/api/users/` | User |
+| `/api/catalog/` | Catalog |
+| `/api/cart/` | Cart |
+| `/api/inventory/` | Inventory |
+| `/api/orders/` | Order |
 
-Keep secrets out of Git. Create local `.env` files from the relevant `.env.example` files and fill in real values.
+See the service-specific README files for endpoint details.
 
-Expected configuration includes:
-- Root `.env`: database names, users, and passwords consumed by Docker Compose.
-- Service `.env` files: Django secret keys, JWT signing key, database connection settings, and downstream service URLs.
+## Main API flows
 
-For the current HS256 learning setup, services that validate the same user access tokens must use the same `JWT_SIGNING_KEY`. Never commit real `.env` files or expose signing keys.
+### Authentication
 
-Environment variable names must match the current settings files. A `.env.example` is documentation only; it does not automatically configure a service unless the application or Compose loads it.
+1. Register with `POST /api/users/register/`.
+2. Obtain JWT tokens with `POST /api/users/login/`.
+3. Send the access token in `Authorization: Bearer <access_token>` for authenticated endpoints.
 
-## API Gateway
+### Product creation and inventory initialization
 
-Nginx routes requests to the relevant internal service. Expected route prefixes are:
+1. A product is created through Catalog.
+2. Catalog publishes a durable `product.created` message to RabbitMQ after the database transaction commits.
+3. Inventory consumes the event and creates its inventory record if one does not already exist.
+4. Invalid Inventory events are rejected to a dead-letter queue.
 
-- `/api/users/` → User Service
-- `/api/catalog/` → Catalog Service
-- `/api/cart/` → Cart Service
-- `/api/orders/` → Order Service
+### Checkout
 
-Inventory may also be exposed through the gateway if configured in `infrastructure/nginx/nginx.conf`. Internal service-to-service calls use Docker DNS service names and internal ports.
-
-## Checkout Flow
-
-1. The client sends `POST /api/orders/checkout/` with a JWT and `Idempotency-Key`.
+1. The client sends `POST /api/orders/checkout/` with a JWT and an `Idempotency-Key` header.
 2. Order retrieves the user's cart from Cart.
-3. Order fetches current product information and price from Catalog.
-4. Order creates a local order and order-item snapshots.
-5. Order asks Inventory to reserve stock for each item using a unique reservation ID.
-6. If a reservation fails, Order attempts to release reservations associated with that order and marks the order failed.
+3. Order retrieves current product details and prices from Catalog.
+4. Order creates the order and order-item snapshots.
+5. Order requests a stock reservation for each item from Inventory.
+6. If a reservation fails, Order attempts compensating releases and marks the order failed.
 7. If all reservations succeed, Order clears the cart and moves the order to `awaiting_payment`.
-8. Payment is handled in a later project stage.
 
-This is an educational Saga-style workflow, not a distributed ACID transaction. Failures during compensation or process termination can leave reservations requiring reconciliation. Checkout retry/recovery and robust handling of ambiguous network outcomes must be tested and improved before production use.
+This is an educational Saga-style workflow, not a distributed ACID transaction. Recovery after process crashes, reconciliation of ambiguous outcomes, and full end-to-end behavior must be tested before production use.
 
-## Testing
-
-Run tests for each service, adapting service names to the current Compose configuration:
+## Run tests
 
 ```bash
 docker compose run --rm user-service python manage.py test
@@ -275,38 +167,28 @@ docker compose run --rm inventory-service python manage.py test inventory
 docker compose run --rm order-service python manage.py test orders
 ```
 
-Some tests may require PostgreSQL or additional service configuration. Cross-service end-to-end tests should be run separately from unit tests that mock HTTP clients.
+Some tests require the relevant database or service configuration. Review each service README for details.
 
-## Security Notes
+## Security and production notes
 
-- Do not commit `.env` files, Django secret keys, JWT signing keys, or real database credentials.
-- Rotate any credentials that were previously committed to a public repository.
-- Set `DEBUG=False` and configure explicit `ALLOWED_HOSTS` for deployments.
-- Use HTTPS at the external gateway in production.
-- The current shared HS256 JWT key is a learning simplification; consider asymmetric signing and service-specific authorization for a stronger production design.
-- Do not treat a cart stock check as a reservation.
-- Do not expose internal database ports or management interfaces publicly in production.
+- Keep `.env` files and all credentials out of Git. Rotate secrets that were ever committed to a public repository.
+- Set `DEBUG=False`, configure explicit `ALLOWED_HOSTS`, and use HTTPS at the public gateway in production.
+- Services validating the same HS256 JWT currently need a consistent `JWT_SIGNING_KEY`; this shared-key arrangement is a learning simplification.
+- Do not expose database ports or internal management endpoints publicly.
+- Do not treat an availability check in Cart as an inventory reservation.
+- Confirm all endpoint contracts, tests, and end-to-end behavior before describing the stack as production-ready.
 
-## Known Limitations
+## Known limitations
 
-- Payment Service is not implemented.
-- Order confirmation after payment is not implemented.
-- Reservation expiry and cancellation/release workflows are not complete.
-- Checkout recovery after process crashes is not complete.
-- A transactional outbox for reliable event publication is not implemented.
-- Dead-letter replay, bounded retries, and reconciliation tooling remain future work.
-- API schemas, CI/CD, metrics, centralized logging, and production deployment hardening remain future work.
-- The endpoint contracts in Order's HTTP clients must be verified against the current Inventory and Cart implementations.
-- This README describes the intended state through the Order Service stage; run tests and an end-to-end checkout before marking the flow verified.
+- Payment Service is outside the current documentation scope and is not part of the documented checkout flow.
+- Order confirmation after payment is not implemented in this stage.
+- Reservation expiry/cancellation workflows and robust recovery from interrupted checkout are incomplete.
+- A transactional outbox, dead-letter replay tooling, bounded retry policies, metrics, centralized logging, CI/CD, and production deployment hardening remain future work.
 
-## Next Steps
+## Suggested next steps
 
-1. Verify Inventory API paths and request/response schemas against its implementation.
-2. Run Order Service tests and migrations.
-3. Verify checkout end to end across Cart, Catalog, and Inventory.
-4. Implement Payment Service.
-5. Confirm inventory reservations after successful payment.
-6. Release reservations when orders are cancelled or expire.
-7. Add recovery for interrupted checkout workflows.
-8. Improve event delivery reliability with a transactional outbox.
-9. Add API documentation, CI/CD, monitoring, and centralized logging.
+1. Verify endpoint contracts and error handling across Cart, Catalog, Inventory, and Order.
+2. Run all service tests and migrations.
+3. Test checkout end to end, including insufficient stock and downstream-service failures.
+4. Improve recovery and reconciliation for interrupted checkout workflows.
+5. Add API schema documentation, observability, CI/CD, and deployment hardening.
