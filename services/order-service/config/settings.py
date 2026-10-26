@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'orders',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -144,10 +145,18 @@ MAILERS = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
     "SIGNING_KEY": os.getenv("JWT_SIGNING_KEY"),
     "ALGORITHM": "HS256"
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Order Service API',
+    'DESCRIPTION': 'OpenAPI documentation for the Order Service.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
