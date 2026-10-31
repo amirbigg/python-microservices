@@ -208,6 +208,54 @@ services:
     depends_on:
       - prometheus
 
+  user-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
+    container_name: shop-user-db-exporter
+    environment:
+      DATA_SOURCE_URI: "user-db:5432/${USER_DB_NAME}"
+      DATA_SOURCE_USER: ${USER_DB_USER}
+      DATA_SOURCE_PASS: ${USER_DB_PASSWORD}
+    ports:
+      - "9187:9187"
+    depends_on:
+      - user-db
+
+  catalog-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
+    container_name: shop-catalog-db-exporter
+    environment:
+      DATA_SOURCE_URI: "catalog-db:5432/${CATALOG_DB_NAME}"
+      DATA_SOURCE_USER: ${CATALOG_DB_USER}
+      DATA_SOURCE_PASS: ${CATALOG_DB_PASSWORD}
+    ports:
+      - "9188:9187"
+    depends_on:
+      - catalog-db
+
+  inventory-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
+    container_name: shop-inventory-db-exporter
+    environment:
+      DATA_SOURCE_URI: "inventory-db:5432/${INVENTORY_DB_NAME}"
+      DATA_SOURCE_USER: ${INVENTORY_DB_USER}
+      DATA_SOURCE_PASS: ${INVENTORY_DB_PASSWORD}
+    ports:
+      - "9189:9187"
+    depends_on:
+      - inventory-db
+
+  order-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
+    container_name: shop-order-db-exporter
+    environment:
+      DATA_SOURCE_URI: "order-db:5432/${ORDER_DB_NAME}"
+      DATA_SOURCE_USER: ${ORDER_DB_USER}
+      DATA_SOURCE_PASS: ${ORDER_DB_PASSWORD}
+    ports:
+      - "9190:9187"
+    depends_on:
+      - order-db
+
 volumes:
   user_postgres_data:
   catalog_postgres_data:

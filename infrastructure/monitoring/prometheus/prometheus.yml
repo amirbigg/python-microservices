@@ -44,3 +44,19 @@ scrape_configs:
     static_configs:
       - targets:
           - "order-service:8004"
+
+  - job_name: "user-postgres"
+    static_configs:
+        - targets: ["user-db-exporter:9187"]
+
+  - job_name: "catalog-postgres"
+    static_configs:
+      - targets: [ "catalog-db-exporter:9187" ]
+
+  - job_name: "inventory-postgres"
+    static_configs:
+      - targets: [ "inventory-db-exporter:9187" ]
+
+  - job_name: "order-postgres"
+    static_configs:
+      - targets: [ "order-db-exporter:9187" ]
