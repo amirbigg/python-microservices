@@ -60,3 +60,13 @@ scrape_configs:
   - job_name: "order-postgres"
     static_configs:
       - targets: [ "order-db-exporter:9187" ]
+
+  - job_name: "redis"
+    static_configs:
+      - targets:
+        - "redis-exporter:9121"
+
+  - job_name: "rabbitmq"
+    static_configs:
+      - targets:
+        - "rabbitmq:15692"

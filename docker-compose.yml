@@ -22,6 +22,7 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./infrastructure/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
 
   redis:
     image: redis:7-alpine
@@ -255,6 +256,17 @@ services:
       - "9190:9187"
     depends_on:
       - order-db
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: shop-redis-exporter
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    restart: unless-stopped
 
 volumes:
   user_postgres_data:
