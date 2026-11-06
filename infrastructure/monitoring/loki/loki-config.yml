@@ -11,11 +11,11 @@ common:
       chunks_directory: /loki/chunks
       rules_directory: /loki/rules
 
-    replication_factor: 1
+  replication_factor: 1
 
-    ring:
-      kvstore:
-        store: inmemory
+  ring:
+    kvstore:
+      store: inmemory
 
 schema_config:
   configs:

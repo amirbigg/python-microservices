@@ -276,7 +276,7 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ./infrastructure/monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml
+      - ./infrastructure/monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki_data:/loki
     restart: unless-stopped
 
