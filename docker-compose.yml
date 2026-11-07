@@ -310,6 +310,20 @@ services:
       - ./infrastructure/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     restart: unless-stopped
 
+  tempo:
+    image: grafana/tempo:2.10.4
+    container_name: shop-tempo
+    command:
+      - -config.file=/etc/tempo/tempo.yml
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./infrastructure/monitoring/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
+    restart: unless-stopped
+
 volumes:
   user_postgres_data:
   catalog_postgres_data:
@@ -321,3 +335,4 @@ volumes:
   prometheus_data:
   alloy_data:
   loki_data:
+  tempo_data:
