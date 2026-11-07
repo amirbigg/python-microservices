@@ -1,7 +1,7 @@
 global:
   resolve_timeout: 5m
 
-  smtp_smarthost: 'smtp.gmail.com'
+  smtp_smarthost: 'smtp.gmail.com:587'
   smtp_from: 'mongard.amir@email.com'
   smtp_auth_username: ''
   smtp_auth_password: ''
