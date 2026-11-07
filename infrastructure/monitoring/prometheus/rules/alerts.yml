@@ -1,0 +1,23 @@
+groups:
+  - name: infrastructure-alerts
+    rules:
+
+      # Prometheus target is down
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Monitoring target is down"
+          description: "Target {{ $labels.instance }} is unavailable."
+
+      # High container CPU usage
+      - alert: HighContainerCPU
+        expr: sum by (name) (rate(container_cpu_usage_seconds_total{name!=""}[5m])) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "Container {{ $labels.name }} is using more the 0.8 CPU cores."

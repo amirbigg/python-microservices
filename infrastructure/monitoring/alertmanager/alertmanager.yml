@@ -1,0 +1,22 @@
+global:
+  resolve_timeout: 5m
+
+  smtp_smarthost: 'smtp.gmail.com'
+  smtp_from: 'mongard.amir@email.com'
+  smtp_auth_username: ''
+  smtp_auth_password: ''
+
+route:
+  receiver: email-notifications
+  group_by:
+    - alertname
+    - severity
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: email-notifications
+    email_configs:
+      - to: 'your@email.com'
+        send_resolved: true
